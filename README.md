@@ -51,5 +51,14 @@ GoPark is a mobile application MVP designed to solve urban parking problems by a
     npm start
     ```
 
+## 📱 Screenshots
+
+<div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; justify-content: center;">
+    <img src="docs/screenshots/home_screen.png" width="200" alt="Home Screen" />
+    <img src="docs/screenshots/ticket_details.png" width="200" alt="Ticket Details" />
+    <img src="docs/screenshots/my_reservations.png" width="200" alt="My Reservations" />
+    <img src="docs/screenshots/profile_screen.png" width="200" alt="Profile Screen" />
+</div>
+
 ---
 *Built for AD432 - Entrepreneurship*
