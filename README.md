@@ -1,4 +1,4 @@
-# GoPark MVP 🚗🅿️
+# Go🅿️ark MVP 
 
 **Concept Project for AD432 Entrepreneurship Class**
 
