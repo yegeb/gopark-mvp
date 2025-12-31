@@ -7,7 +7,7 @@ GoPark is a mobile application MVP designed to solve urban parking problems by a
 ## 🌟 Key Features
 
 *   **Real-time Map Integration**: Browse ISPARK and independent parking lots across Istanbul (Besiktas, Kadikoy, Sisli, etc.).
-*   **Dynamic Occupancy**: View real-time capacity with visual indicators (Green/Red bars).
+*   **Dynamic Occupancy**: View real-time capacity with visual indicators .
 *   **Smart Reservations**:
     *   Reserve a spot for specific hours.
     *   **Tiered Pricing Model**: Realistic pricing calculation based on duration (similar to ISPARK rates).
@@ -20,7 +20,6 @@ GoPark is a mobile application MVP designed to solve urban parking problems by a
 *   **Frontend**: React Native (Expo), TypeScript
 *   **Backend**: Node.js, Express, MongoDB (Mongoose)
 *   **Navigation**: React Navigation (Stack & Bottom Tabs)
-*   **Features**: `react-native-maps`, `react-native-qrcode-svg`
 
 ## 🚀 Getting Started
 
