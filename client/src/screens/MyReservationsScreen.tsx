@@ -32,10 +32,22 @@ const MyReservationsScreen = ({ navigation }: any) => {
     fetchReservations();
   };
 
-  const handleCancel = (id: string) => {
+  const handleCancel = (item: any) => {
+      const start = new Date(item.startTime);
+      const timeDiff = start.getTime() - new Date().getTime();
+      const hoursRemaining = timeDiff / (1000 * 60 * 60);
+
+      let alertTitle = "Cancel Reservation";
+      let alertMessage = "Cancelling this reservation will issue a full refund. Do you want to continue?";
+      
+      if (hoursRemaining < 2) {
+           alertTitle = "Late Cancellation";
+           alertMessage = "You are cancelling within 2 hours of the start time. No refund will be provided. Proceed anyway?";
+      }
+
       Alert.alert(
-          "Cancel Reservation",
-          "Are you sure you want to cancel this reservation?",
+          alertTitle,
+          alertMessage,
           [
               { text: "No", style: "cancel" },
               { 
@@ -43,8 +55,9 @@ const MyReservationsScreen = ({ navigation }: any) => {
                   style: 'destructive',
                   onPress: async () => {
                       try {
-                          await reservationAPI.cancel(id);
-                          Alert.alert("Success", "Reservation cancelled.");
+                          const response = await reservationAPI.cancel(item._id);
+                          const refundMsg = response.data.refund ? " Refund processed." : " No refund issued.";
+                          Alert.alert("Success", "Reservation cancelled." + refundMsg);
                           fetchReservations(); // Refresh list
                       } catch (error: any) {
                           Alert.alert("Error", error.response?.data?.message || "Could not cancel.");
@@ -60,12 +73,21 @@ const MyReservationsScreen = ({ navigation }: any) => {
       const end = new Date(item.endTime);
       const isActive = item.status === 'Active';
 
+      const getStatusColor = (status: string) => {
+          switch(status) {
+              case 'Active': return '#28a745'; // Green
+              case 'Completed': return '#3d97e7ff'; // Blue
+              case 'Cancelled': return '#dc3545'; // Red
+              default: return '#333';
+          }
+      };
+
       return (
         <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ReservationDetails', { reservation: item })}>
             <View style={styles.header}>
                 <Text style={styles.parkingName}>{item.parkingId?.name || 'Unknown Parking'}</Text>
                 <View style={styles.statusBadge}>
-                    <Text style={[styles.status, { color: isActive ? '#28a745' : '#dc3545' }]}>{item.status}</Text>
+                    <Text style={[styles.status, { color: getStatusColor(item.status) }]}>{item.status}</Text>
                 </View>
             </View>
             <Text style={styles.address}>{item.parkingId?.district}, {item.parkingId?.neighborhood}</Text>
@@ -76,7 +98,7 @@ const MyReservationsScreen = ({ navigation }: any) => {
             </View>
 
             {isActive && (
-                <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel(item._id)}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel(item)}>
                     <Text style={styles.cancelText}>Cancel Reservation</Text>
                 </TouchableOpacity>
             )}
@@ -114,9 +136,9 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: '#666' },
   
   card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 15, elevation: 2 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  parkingName: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  statusBadge: { backgroundColor: '#f8f9fa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' },
+  parkingName: { fontSize: 18, fontWeight: 'bold', color: '#333', flex: 1, marginRight: 10 },
+  statusBadge: { backgroundColor: '#f8f9fa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' },
   status: { fontWeight: 'bold' },
   
   address: { color: '#666', marginBottom: 10 },

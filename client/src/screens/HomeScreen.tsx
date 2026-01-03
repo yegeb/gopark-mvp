@@ -41,7 +41,7 @@ const HomeScreen = ({ navigation }: any) => {
             <FilterHeader onFilterChange={handleFilterChange} />
             {loading ? (
                 <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#0000ff" />
+                    <ActivityIndicator size="large" color="#007bff" />
                 </View>
             ) : (
                 <FlatList

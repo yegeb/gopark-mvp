@@ -76,11 +76,27 @@ exports.createReservation = async (req, res) => {
 
 exports.getMyReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.find({ userId: req.user.id })
+        let reservations = await Reservation.find({ userId: req.user.id })
             .populate('parkingId', 'name district neighborhood pricePerHour coordinates')
             .sort({ startTime: -1 }); // Newest first
+
+        // Auto-update status for expired reservations
+        const now = new Date();
+        const updates = reservations.map(async (r) => {
+            if (r.status === 'Active' && new Date(r.endTime) < now) {
+                r.status = 'Completed';
+                await r.save();
+            }
+        });
+
+        await Promise.all(updates);
+
+        // Re-fetch or just return the modified objects (since we modified them in place in memory too)
+        // Mongoose objects are mutable, so r.status = 'Completed' updates the object in the array.
+
         res.json(reservations);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -102,10 +118,24 @@ exports.cancelReservation = async (req, res) => {
             return res.status(400).json({ message: 'Reservation cannot be cancelled.' });
         }
 
+        // Check if reservation has already started
+        if (new Date(reservation.startTime) <= new Date()) {
+            return res.status(400).json({ message: 'Cannot cancel a reservation that has already started or passed.' });
+        }
+
+        // Refund Logic:
+        // > 2 Hours before start -> Refund
+        // < 2 Hours before start -> No Refund
+        const twoHoursBeforeStart = new Date(reservation.startTime).getTime() - (2 * 60 * 60 * 1000);
+        const refundIssued = Date.now() <= twoHoursBeforeStart;
+
         reservation.status = 'Cancelled';
         await reservation.save();
 
-        res.json({ message: 'Reservation Cancelled' });
+        res.json({
+            message: 'Reservation Cancelled',
+            refund: refundIssued
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

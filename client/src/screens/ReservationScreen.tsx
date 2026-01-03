@@ -26,7 +26,33 @@ const ReservationScreen = ({ route, navigation }: any) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpStep, setOtpStep] = useState(false);
-  const [fullName, setFullName] = useState(''); // New State
+  
+  // Payment Form State
+  const [fullName, setFullName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+
+  // Formatting Functions
+  const handleCardNumberChange = (text: string) => {
+      const cleaned = text.replace(/\D/g, '').slice(0, 16); // Only numbers, max 16
+      const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
+      setCardNumber(formatted);
+  };
+
+  const handleExpiryChange = (text: string) => {
+      const cleaned = text.replace(/\D/g, '').slice(0, 4); // Only numbers, max 4 (MMYY)
+      if (cleaned.length >= 3) {
+          setExpiryDate(`${cleaned.slice(0, 2)}/${cleaned.slice(2)}`);
+      } else {
+          setExpiryDate(cleaned);
+      }
+  };
+
+  const handleCvvChange = (text: string) => {
+      const cleaned = text.replace(/\D/g, '').slice(0, 3); // Only numbers, max 3
+      setCvv(cleaned);
+  };
 
   // Calculate Fee Effect
   React.useEffect(() => {
@@ -48,19 +74,53 @@ const ReservationScreen = ({ route, navigation }: any) => {
       }
   }, [date, startTime, endTime, parking]);
 
+  /* iOS-specific: Don't close immediately on change. Android: Close on selection (event.type === 'set' or 'dismissed') */
   const onChangeDate = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
     if (selectedDate) setDate(selectedDate);
+    if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+    }
   };
 
   const onChangeStartTime = (event: any, selectedDate?: Date) => {
-    setShowStartTimePicker(false);
     if (selectedDate) setStartTime(selectedDate);
+    if (Platform.OS === 'android') {
+        setShowStartTimePicker(false);
+    }
   };
 
   const onChangeEndTime = (event: any, selectedDate?: Date) => {
-    setShowEndTimePicker(false);
     if (selectedDate) setEndTime(selectedDate);
+    if (Platform.OS === 'android') {
+        setShowEndTimePicker(false);
+    }
+  };
+
+  // Helper to render picker with "Done" button for iOS
+  const renderPicker = (
+      show: boolean, 
+      setShow: (val: boolean) => void, 
+      value: Date, 
+      onChange: (event: any, date?: Date) => void,
+      mode: 'date' | 'time',
+      minDate?: Date
+  ) => {
+      if (!show) return null;
+
+      return (
+          <View>
+              <DateTimePicker
+                  value={value}
+                  mode={mode}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onChange}
+                  minimumDate={minDate}
+              />
+              {Platform.OS === 'ios' && (
+                  <Button title="Done" onPress={() => setShow(false)} />
+              )}
+          </View>
+      );
   };
 
   const handleInitiatePayment = () => {
@@ -78,6 +138,21 @@ const ReservationScreen = ({ route, navigation }: any) => {
       
       if (!fullName.trim()) {
           Alert.alert('Missing Information', 'Please enter the Full Name on Card.');
+          return;
+      }
+      
+      if (cardNumber.length < 19) { // 16 digits + 3 spaces
+          Alert.alert('Invalid Card', 'Please enter a valid 16-digit card number.');
+          return;
+      }
+
+      if (expiryDate.length < 5) { // MM/YY
+          Alert.alert('Invalid Expiry', 'Please enter a valid expiry date (MM/YY).');
+          return;
+      }
+
+      if (cvv.length < 3) {
+          Alert.alert('Invalid CVV', 'CVV must be 3 digits.');
           return;
       }
 
@@ -168,44 +243,22 @@ const ReservationScreen = ({ route, navigation }: any) => {
                     <Text style={styles.sectionHeader}>Select Date & Time</Text>
                     
                     {/* Date Selector */}
-                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowDatePicker(!showDatePicker)}>
                         <Text style={styles.pickerText}>Date: {date.toLocaleDateString()}</Text>
                     </TouchableOpacity>
-                    {showDatePicker && (
-                        <DateTimePicker
-                            value={date}
-                            mode="date"
-                            display="default"
-                            onChange={onChangeDate}
-                            minimumDate={new Date()}
-                        />
-                    )}
+                    {renderPicker(showDatePicker, setShowDatePicker, date, onChangeDate, 'date', new Date())}
 
                     {/* Start Time Selector */}
-                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowStartTimePicker(true)}>
+                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowStartTimePicker(!showStartTimePicker)}>
                         <Text style={styles.pickerText}>Start: {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                     </TouchableOpacity>
-                    {showStartTimePicker && (
-                        <DateTimePicker
-                            value={startTime}
-                            mode="time"
-                            display="default"
-                            onChange={onChangeStartTime}
-                        />
-                    )}
+                    {renderPicker(showStartTimePicker, setShowStartTimePicker, startTime, onChangeStartTime, 'time')}
 
                     {/* End Time Selector */}
-                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowEndTimePicker(true)}>
+                    <TouchableOpacity style={styles.pickerButton} onPress={() => setShowEndTimePicker(!showEndTimePicker)}>
                         <Text style={styles.pickerText}>End: {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                     </TouchableOpacity>
-                    {showEndTimePicker && (
-                        <DateTimePicker
-                            value={endTime}
-                            mode="time"
-                            display="default"
-                            onChange={onChangeEndTime}
-                        />
-                    )}
+                    {renderPicker(showEndTimePicker, setShowEndTimePicker, endTime, onChangeEndTime, 'time')}
 
                     {/* Payment Form (Mock Inputs) */}
                     <View style={styles.paymentSection}>
@@ -220,21 +273,28 @@ const ReservationScreen = ({ route, navigation }: any) => {
                         
                         <TextInput 
                             style={styles.input} 
-                            placeholder="Card Number (4242 4242 4242 4242)" 
+                            placeholder="Card Number (0000 0000 0000 0000)" 
                             keyboardType="numeric" 
                             maxLength={19}
+                            value={cardNumber}
+                            onChangeText={handleCardNumberChange}
                         />
                         <View style={styles.row}>
                             <TextInput 
                                 style={[styles.input, styles.halfInput]} 
                                 placeholder="MM/YY" 
+                                keyboardType="numeric"
                                 maxLength={5}
+                                value={expiryDate}
+                                onChangeText={handleExpiryChange}
                             />
                             <TextInput 
                                 style={[styles.input, styles.halfInput]} 
                                 placeholder="CVV" 
                                 keyboardType="numeric" 
                                 maxLength={3}
+                                value={cvv}
+                                onChangeText={handleCvvChange}
                             />
                         </View>
                     </View>
@@ -275,6 +335,9 @@ const ReservationScreen = ({ route, navigation }: any) => {
                             size={180}
                         />
                         <Text style={styles.qrLabel}>Scan at Entry</Text>
+                        <Text style={styles.warningText}>
+                            Please scan the QR code within 15 minutes of your reservation start time. If not, your reservation will be canceled.
+                        </Text>
                     </View>
 
                     <Button title="Get Directions" onPress={openMaps} />
@@ -464,7 +527,9 @@ const styles = StyleSheet.create({
   verifyText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 
   cancelLink: { marginTop: 15 },
-  cancelLinkText: { color: '#dc3545', fontSize: 14 }
+  cancelLinkText: { color: '#dc3545', fontSize: 14 },
+  
+  warningText: { color: '#dc3545', textAlign: 'center', fontSize: 14, marginTop: 10, paddingHorizontal: 10 }
 });
 
 export default ReservationScreen;

@@ -33,9 +33,20 @@ const ReservationDetailsScreen = ({ route, navigation }: any) => {
     };
 
     const handleCancel = () => {
+        const timeDiff = start.getTime() - new Date().getTime();
+        const hoursRemaining = timeDiff / (1000 * 60 * 60);
+
+        let alertTitle = "Cancel Reservation";
+        let alertMessage = "Cancelling this reservation will issue a full refund. Do you want to continue?";
+        
+        if (hoursRemaining < 2) {
+             alertTitle = "Late Cancellation";
+             alertMessage = "You are cancelling within 2 hours of the start time. No refund will be provided. Proceed anyway?";
+        }
+
         Alert.alert(
-            "Cancel Reservation",
-            "Are you sure you want to cancel this reservation?",
+            alertTitle,
+            alertMessage,
             [
                 { text: "No", style: "cancel" },
                 { 
@@ -43,8 +54,9 @@ const ReservationDetailsScreen = ({ route, navigation }: any) => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await reservationAPI.cancel(reservation._id);
-                            Alert.alert("Success", "Reservation cancelled.");
+                            const response = await reservationAPI.cancel(reservation._id);
+                            const refundMsg = response.data.refund ? " Refund processed." : " No refund issued.";
+                            Alert.alert("Success", "Reservation cancelled." + refundMsg);
                             navigation.goBack(); 
                         } catch (error: any) {
                             Alert.alert("Error", error.response?.data?.message || "Could not cancel.");
@@ -55,12 +67,21 @@ const ReservationDetailsScreen = ({ route, navigation }: any) => {
         );
     };
 
+    const getStatusColor = (status: string) => {
+        switch(status) {
+            case 'Active': return '#28a745'; // Green
+            case 'Completed': return '#3d97e7ff'; // Blue
+            case 'Cancelled': return '#dc3545'; // Red
+            default: return '#333';
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.card}>
                     <Text style={styles.title}>Reservation Details</Text>
-                    <Text style={[styles.status, { color: isActive ? '#28a745' : '#dc3545'}]}>
+                    <Text style={[styles.status, { color: getStatusColor(reservation.status) }]}>
                         {reservation.status === 'Active' ? 'Reservation Confirmed!' : reservation.status}
                     </Text>
 
@@ -85,6 +106,11 @@ const ReservationDetailsScreen = ({ route, navigation }: any) => {
                             size={180}
                         />
                         <Text style={styles.qrLabel}>Scan at Entry</Text>
+                        {isActive && (
+                            <Text style={styles.warningText}>
+                                Please scan the QR code within 15 minutes of your reservation start time. If not, your reservation will be canceled.
+                            </Text>
+                        )}
                     </View>
                     
                     <View style={styles.feeContainer}>
@@ -97,6 +123,9 @@ const ReservationDetailsScreen = ({ route, navigation }: any) => {
                     {isActive && (
                         <View style={{ marginTop: 20, width: '100%' }}>
                             <Button title="Cancel Reservation" color="#dc3545" onPress={handleCancel} />
+                            <Text style={styles.policyNote}>
+                                To ensure availability for all users, cancellations made less than 2 hours before the reservation start time are non-refundable.
+                            </Text>
                         </View>
                     )}
                 </View>
@@ -122,7 +151,11 @@ const styles = StyleSheet.create({
 
     feeContainer: { marginBottom: 20, alignItems: 'center' },
     feeLabel: { fontSize: 16, color: '#666' },
-    feeAmount: { fontSize: 24, fontWeight: 'bold', color: '#28a745' }
+    feeAmount: { fontSize: 24, fontWeight: 'bold', color: '#28a745' },
+
+    policyNote: { marginTop: 15, fontSize: 13, color: '#666', textAlign: 'center', fontStyle: 'italic' },
+    
+    warningText: { color: '#dc3545', textAlign: 'center', fontSize: 14, marginTop: 10, paddingHorizontal: 10 }
 });
 
 export default ReservationDetailsScreen;

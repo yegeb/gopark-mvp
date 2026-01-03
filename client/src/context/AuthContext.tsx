@@ -64,7 +64,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       setIsLoading(true);
       let userToken = await AsyncStorage.getItem('userToken');
-      setUserToken(userToken);
+      
+      if (userToken) {
+          // Verify token with backend
+          try {
+            // Wait for the user to be fetched
+            await authAPI.getUser();
+            setUserToken(userToken);
+          } 
+          catch (error) {
+            console.log("Token validation failed", error);
+            // Token is invalid, remove it
+            await AsyncStorage.removeItem('userToken');
+            setUserToken(null);
+          }
+      } else {
+          setUserToken(null);
+      }
+      
       setIsLoading(false);
     } catch (e) {
         console.log(`isLoggedIn error ${e}`);
